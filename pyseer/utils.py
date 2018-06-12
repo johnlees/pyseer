@@ -6,6 +6,7 @@ import os
 import contextlib
 from decimal import Decimal
 
+
 # thanks to Laurent LAPORTE on SO
 @contextlib.contextmanager
 def set_env(**environ):
@@ -35,24 +36,59 @@ with set_env(MKL_NUM_THREADS='1',
     import numpy as np
 
 
-def format_output(item, print_samples=False):
+def format_output(item, lineage_dict=None, lmm=False, print_samples=False):
+    """Format results for a variant for stdout printing
+
+    Args:
+        item (pyseer.classes.Seer or pyseer.classes.LMM)
+            Variant results container
+        lineage_dict (list)
+            Lineage labels
+        lmm (bool)
+            Whether the variant was fitted through LMM
+        print_samples (bool)
+            Whether to add the samples list to the putput
+
+    Returns:
+        out (str)
+            Tab-delimited string to be printed
+    """
     out = '%s' % item.kmer
     out += '\t' + '\t'.join(['%.2E' % Decimal(x)
                              if np.isfinite(x)
                              else ''
                              for x in (item.af,
                                        item.prep,
-                                       item.lrt_pvalue,
+                                       item.pvalue,
                                        item.kbeta,
-                                       item.bse,
-                                       item.intercept)])
-    out += '\t' + '\t'.join(['%.2E' % x
+                                       item.bse)])
+    if lmm:
+        if np.isfinite(item.frac_h2):
+            frac_h2 = '%.2E' % Decimal(item.frac_h2)
+        else:
+            frac_h2 = ''
+        out += '\t' + frac_h2
+    else:
+        if np.isfinite(item.intercept):
+            intercept = '%.2E' % Decimal(item.intercept)
+        else:
+            intercept = ''
+        out += '\t' + intercept + '\t'
+        # No distances may not have further betas
+        if not np.all(np.equal(item.betas, None)):
+            out += '\t'.join(['%.2E' % Decimal(x)
                              if np.isfinite(x)
                              else ''
                              for x in item.betas])
+
+    if lineage_dict is not None:
+        if item.max_lineage is not None and np.isfinite(item.max_lineage):
+            out += '\t' + lineage_dict[item.max_lineage]
+        else:
+            out += '\tNA'
     if print_samples:
         out += '\t' + '\t'.join((','.join(item.kstrains),
                                  ','.join(item.nkstrains)))
     out += '\t%s' % ','.join(item.notes)
-    return out
 
+    return out
