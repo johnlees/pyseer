@@ -69,6 +69,7 @@ def initialise_lmm(p, cov, K_in, lmm_cache_in=None, lmm_cache_out=None, lineage_
         # read and normalise K
         K = pd.read_table(K_in,
                           index_col=0)
+        K.index = K.index.astype(str)
         sys.stderr.write("Similarity matrix has dimension " + str(K.shape) + "\n")
 
         # If using lineages, check compatible with LMM
